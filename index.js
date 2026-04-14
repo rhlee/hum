@@ -3,7 +3,7 @@
 new class {
   static get SIZE() {return 8;}
   static get COUNT() {return 1;}
-  static get MAXIMUM() {return 2 ** 8 - 1;}
+  static get MAXIMUM() {return 255;}
 
   constructor(_canvas) {this.canvas = _canvas;}
 
@@ -24,8 +24,8 @@ new class {
     this.analyser = new AnalyserNode(
       context,
       {
-        fftSize: self.SIZE,
-        channelCount: self.COUNT,
+        fftSize: this.constructor.SIZE ** 2,
+        channelCount: this.constructor.COUNT,
         channelCountMode: 'explicit'
       }
     );
@@ -35,7 +35,8 @@ new class {
 
     const _canvas = this.canvas;
     this.context = _canvas.getContext('2d');
-    this.width = _canvas.width / count;
+    _canvas.width = count;
+    _canvas.height = this.constructor.MAXIMUM;
 
     const renderBound = this.render.bind(this);
     this.renderBound = renderBound;
@@ -44,27 +45,20 @@ new class {
 
   render() {
     const context = this.context;
-    const width = this.canvas.width;
-    const height = this.canvas.height;
 
-    context.clearRect(0, 0, width, height);
-    context.fillStyle = 'black';
-    context.fillRect(0, 0, width, height);
-
+    const maximum = this.constructor.MAXIMUM;
     const data = this.data;
-    this.analyser.getByteFrequencyData(data);
     const length = data.length;
-    const widthBar = this.width;
+    context.clearRect(0, 0, length, maximum);
+    context.fillStyle = 'black';
+    context.fillRect(0, 0, length, maximum);
+
+    this.analyser.getByteFrequencyData(data);
 
     context.fillStyle = 'red';
     for(let index = 0; index < length; index++) {
-      const heightBar = data[index] / 255;
-      context.fillRect(
-        index * widthBar,
-        height * (1 - heightBar),
-        widthBar,
-        height * heightBar
-      );
+      const value = data[index];
+      context.fillRect(index, maximum - value, 1, value);
     }
 
     requestAnimationFrame(this.renderBound);
