@@ -1,7 +1,7 @@
 'use strict';
 
 new class {
-  static get SIZE() {return 8;}
+  static get SIZE() {return 10;}
   static get COUNT() {return 1;}
   static get MAXIMUM() {return 255;}
 
@@ -24,9 +24,10 @@ new class {
     this.analyser = new AnalyserNode(
       context,
       {
-        fftSize: this.constructor.SIZE ** 2,
+        fftSize: 2 ** this.constructor.SIZE,
         channelCount: this.constructor.COUNT,
-        channelCountMode: 'explicit'
+        channelCountMode: 'explicit',
+        smoothingTimeConstant: 0.95
       }
     );
     source.connect(this.analyser);
