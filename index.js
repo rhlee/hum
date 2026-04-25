@@ -2,6 +2,7 @@
 
 new class {
   static get SIZE() {return 12;}
+  static get FOCUS() {return 2;}
   static get COUNT() {return 1;}
   static get MAXIMUM() {return 255;}
 
@@ -36,7 +37,7 @@ new class {
 
     const _canvas = this.canvas;
     this.context = _canvas.getContext('2d');
-    _canvas.width = count;
+    _canvas.width = count / this.constructor.FOCUS ** 2;
     _canvas.height = this.constructor.MAXIMUM;
 
     const renderBound = this.render.bind(this);
