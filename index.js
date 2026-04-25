@@ -1,7 +1,7 @@
 'use strict';
 
 new class {
-  static get SIZE() {return 10;}
+  static get SIZE() {return 12;}
   static get COUNT() {return 1;}
   static get MAXIMUM() {return 255;}
 
