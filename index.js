@@ -38,7 +38,7 @@ new class {
     const width = count / this.constructor.FOCUS ** 2;
     this.window = Array.from(
       {length: this.constructor.SIZE_BUFFER},
-      () => ({used: false, time: null, data: new Float32Array(count)})
+      () => ({used: false, time: null, data: new Float32Array(count + 1)})
     );
     this.end = 0;
     this.start = 1;
@@ -91,9 +91,23 @@ new class {
     }
 
     const count = end - start;
+    let average = 0;
+    let oldAverage;
+    let positive = true;
+    let oldPositive;
     context.fillStyle = 'red';
     for(let indexBin = 0; indexBin < length; indexBin++) {
-      const average = total[indexBin] / count;
+      oldAverage = average;
+      oldPositive = positive;
+
+      average = total[indexBin] / count;
+      positive = average > oldAverage;
+
+      if(oldPositive && !positive && oldAverage - floor > 0) {
+        context.fillStyle = 'purple';
+        context.fillRect(indexBin - 1, 0, 1, ceiling - average);
+        context.fillStyle = 'red';
+      }
       context.fillRect(indexBin, ceiling - average, 1, average - floor);
     }
 
