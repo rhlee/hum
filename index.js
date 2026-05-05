@@ -6,6 +6,8 @@ new class {
   static get COUNT() {return 1;}
   static get SIZE_WINDOW() {return 1000;}
   static get SIZE_BUFFER() {return 256;}
+  static get CLEARANCE() {return 2;}
+  static get THRESHOLD() {return 1;}
 
   constructor(_canvas) {this.canvas = _canvas;}
 
@@ -44,6 +46,10 @@ new class {
     );
     this.end = 0;
     this.start = 1;
+    const clearance = constructor.CLEARANCE;
+    this.boundLower = clearance * 2 - 1;
+    this.boundUpper = width - clearance;
+    this.threshold = constructor.THRESHOLD + analyser.minDecibels;
 
     const _canvas = this.canvas;
     this.context = _canvas.getContext('2d');
@@ -63,7 +69,7 @@ new class {
     const lengthWindow = _window.length;
     this.end = (this.end + 1) % lengthWindow;
     const frame = _window[this.end];
-    if(frame.used) return;
+    if (frame.used) return;
     frame.used = true;
     frame.time = time;
     const data = frame.data;
@@ -89,27 +95,35 @@ new class {
     const total = new Float32Array(length);
     for (let indexFrame = start; indexFrame < end; indexFrame++) {
       const data = _window[indexFrame % lengthWindow].data;
-      for(let indexBin = 0; indexBin < length; indexBin++)
+      for (let indexBin = 0; indexBin < length; indexBin++)
         total[indexBin] += data[indexBin];
     }
 
     const count = end - start;
-    let average = 0;
-    let oldAverage;
-    let positive = true;
-    let oldPositive;
+    let average;
+    const averages = new Float32Array(length);
+    const boundLower = this.boundLower;
+    const boundUpper = this.boundUpper;
+    const clearance = constructor.CLEARANCE;
+    let middle;
+    let indexMiddle;
+    const threshold = this.threshold;
+
     context.fillStyle = 'red';
-    for(let indexBin = 0; indexBin < length; indexBin++) {
-      oldAverage = average;
-      oldPositive = positive;
-
-      average = total[indexBin] / count;
-      positive = average > oldAverage;
-
-      if(oldPositive && !positive && oldAverage - floor > 0) {
-        context.fillStyle = 'purple';
-        context.fillRect(indexBin - 1, 0, 1, ceiling - average);
-        context.fillStyle = 'red';
+    for (let indexBin = 0; indexBin < length; indexBin++) {
+      average = averages[indexBin] = total[indexBin] / count;
+      if (indexBin > boundLower && indexBin < boundUpper) {
+        indexMiddle = indexBin - clearance;
+        middle = averages[indexMiddle];
+        if (
+          middle > threshold &&
+          averages[indexMiddle - 1] < middle &&
+          middle > averages[indexMiddle + 1]
+        ) {
+          context.fillStyle = 'purple';
+          context.fillRect(indexMiddle, 0, 1, ceiling - middle);
+          context.fillStyle = 'red';
+        }
       }
       context.fillRect(indexBin, ceiling - average, 1, average - floor);
     }
