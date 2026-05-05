@@ -12,12 +12,14 @@ new class {
   load() {document.addEventListener('DOMContentLoaded', this.run.bind(this));}
 
   async run() {
+    const constructor = this.constructor;
+
     const context = new AudioContext();
     context.resume();
     const source = context.createMediaStreamSource
       (await navigator.mediaDevices.getUserMedia({
         audio: {
-          channelCount: this.COUNT,
+          channelCount: constructor.COUNT,
           echoCancellation: false,
           noiseSuppression: false,
           autoGainControl: false
@@ -26,8 +28,8 @@ new class {
     const analyser = new AnalyserNode(
       context,
       {
-        fftSize: 2 ** this.constructor.SIZE,
-        channelCount: this.constructor.COUNT,
+        fftSize: 2 ** constructor.SIZE,
+        channelCount: constructor.COUNT,
         channelCountMode: 'explicit'
       }
     );
@@ -35,9 +37,9 @@ new class {
     source.connect(analyser);
     const count = analyser.frequencyBinCount;
     this.data = new Uint8Array(count);
-    const width = count / this.constructor.FOCUS ** 2;
+    const width = count / constructor.FOCUS ** 2;
     this.window = Array.from(
-      {length: this.constructor.SIZE_BUFFER},
+      {length: constructor.SIZE_BUFFER},
       () => ({used: false, time: null, data: new Float32Array(count + 1)})
     );
     this.end = 0;
@@ -54,6 +56,7 @@ new class {
   }
 
   render(time) {
+    const constructor = this.constructor;
     const analyser = this.analyser;
 
     const _window = this.window;
@@ -65,7 +68,7 @@ new class {
     frame.time = time;
     const data = frame.data;
     analyser.getFloatFrequencyData(data);
-    while (time - _window[this.start].time > this.constructor.SIZE_WINDOW) {
+    while (time - _window[this.start].time > constructor.SIZE_WINDOW) {
       _window[this.start].used = false;
       this.start = (this.start + 1) % lengthWindow;
     }
