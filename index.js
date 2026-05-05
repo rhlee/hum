@@ -40,7 +40,7 @@ new class {
     const width = count / constructor.FOCUS ** 2;
     this.window = Array.from(
       {length: constructor.SIZE_BUFFER},
-      () => ({used: false, time: null, data: new Float32Array(count + 1)})
+      () => ({used: false, time: null, data: new Float32Array(count)})
     );
     this.end = 0;
     this.start = 1;
