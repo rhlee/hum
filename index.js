@@ -6,7 +6,7 @@ new class {
   static get COUNT() {return 1;}
   static get SIZE_WINDOW() {return 1000;}
   static get SIZE_BUFFER() {return 256;}
-  static get CLEARANCE() {return 2;}
+  static get CLEARANCE() {return 5;}
   static get THRESHOLD() {return 1;}
 
   constructor(_canvas) {this.canvas = _canvas;}
@@ -108,6 +108,8 @@ new class {
     let middle;
     let indexMiddle;
     const threshold = this.threshold;
+    const clearanceWidth = clearance * 2 + 1;
+    const peaks = new Array(length);
 
     context.fillStyle = 'red';
     for (let indexBin = 0; indexBin < length; indexBin++) {
@@ -115,16 +117,26 @@ new class {
       if (indexBin > boundLower && indexBin < boundUpper) {
         indexMiddle = indexBin - clearance;
         middle = averages[indexMiddle];
-        if (
-          middle > threshold &&
+        peaks[indexMiddle]
+          = middle > threshold &&
           averages[indexMiddle - 1] < middle &&
           middle > averages[indexMiddle + 1]
-        ) {
-          context.fillStyle = 'purple';
-          context.fillRect(indexMiddle, 0, 1, ceiling - middle);
-          context.fillStyle = 'red';
-        }
+            && Math.max(
+              ...averages.slice(indexBin + 1 - clearanceWidth, indexBin + 1)
+            )
+            === middle;
       }
+    }
+    let peak;
+    context.fillStyle = 'red';
+    for (let indexBin = 0; indexBin < length; indexBin++) {
+      peak = peaks[indexBin];
+      if (peak) {
+        context.fillStyle = 'purple';
+        context.fillRect(indexBin, 0, 1, ceiling - floor);
+      }
+      average = averages[indexBin];
+      context.fillStyle = 'red';
       context.fillRect(indexBin, ceiling - average, 1, average - floor);
     }
 
