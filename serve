@@ -1,0 +1,47 @@
+#!/usr/bin/env python3
+
+from sys import argv
+from http.server import SimpleHTTPRequestHandler
+from http import HTTPStatus
+from socketserver import UnixStreamServer
+from os import unlink, chmod
+from os.path import dirname, exists
+
+
+def main(path):
+    if exists(path): unlink(path)
+    with SocketServer(path, Handler) as server:
+        chmod(path, 0o666)
+        server.serve_forever()
+
+
+class SocketServer(UnixStreamServer):
+    allow_reuse_address = True
+
+class Handler(SimpleHTTPRequestHandler):
+    def __init__(self, *arguments, **keywords):
+        super().__init__\
+            (*arguments, directory = dirname(__file__), **keywords)
+
+    def address_string(self):
+        return 'unix-socket'
+
+    def do_GET(self):
+        if self.path == "/serve":
+            self.send_error(HTTPStatus.FORBIDDEN, "Forbidden")
+        else:
+            headers = self.headers
+            for header in ('If-Modified-Since', 'If-None-Match'):
+                if header in headers: headers.replace_header(header, "")
+            super().do_GET()
+
+    def do_POST(self):
+        print(
+            self.rfile.read(int(self.headers.get('Content-Length', 0)))\
+            .decode()
+        )
+        self.send_response(204)
+        self.end_headers()
+
+
+if __name__ == '__main__': main(argv[1])

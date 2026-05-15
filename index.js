@@ -55,6 +55,7 @@ new class {
     this.context = _canvas.getContext('2d');
     _canvas.width = width;
     _canvas.height = analyser.maxDecibels - analyser.minDecibels;
+    _canvas.onclick = () => {this.clicked = true;};
 
     const renderBound = this.render.bind(this);
     this.renderBound = renderBound;
@@ -109,7 +110,9 @@ new class {
     let indexMiddle;
     const threshold = this.threshold;
     const clearanceWidth = clearance * 2 + 1;
-    const peaks = new Array(length);
+    const peaksBoolean = new Array(length);
+    const peaks = [];
+    let peak;
 
     context.fillStyle = 'red';
     for (let indexBin = 0; indexBin < length; indexBin++) {
@@ -117,29 +120,95 @@ new class {
       if (indexBin > boundLower && indexBin < boundUpper) {
         indexMiddle = indexBin - clearance;
         middle = averages[indexMiddle];
-        peaks[indexMiddle]
+        peaksBoolean[indexMiddle]
           = middle > threshold &&
           averages[indexMiddle - 1] < middle &&
           middle > averages[indexMiddle + 1]
             && Math.max(
               ...averages.slice(indexBin + 1 - clearanceWidth, indexBin + 1)
             )
-            === middle;
+            === middle &&
+          peaks.push(indexBin);
       }
     }
-    let peak;
+
     context.fillStyle = 'red';
     for (let indexBin = 0; indexBin < length; indexBin++) {
-      peak = peaks[indexBin];
-      if (peak) {
+      if (peaksBoolean[indexBin]) {
         context.fillStyle = 'purple';
         context.fillRect(indexBin, 0, 1, ceiling - floor);
+        context.fillStyle = 'red';
       }
       average = averages[indexBin];
-      context.fillStyle = 'red';
       context.fillRect(indexBin, ceiling - average, 1, average - floor);
     }
 
+    if (this.clicked) {
+      const lengthPeaks = peaks.length;
+      const differences = new Array((lengthPeaks * (lengthPeaks - 1) / 2) + 1);
+      let differenceIndex = 0;
+      let second;
+      for (let first = 1; first < lengthPeaks; first++)
+        for (second = 0; second < first; second++)
+          differences[differenceIndex++]
+            = Math.abs(peaks[first] - peaks[second]);
+      differences.sort((_first, _second) => _first - _second);
+
+      const differenceFrequencies = new Array();
+      let maximum = 0;
+      {
+        let difference = differences[0];
+        let frequency = 0;
+        for (const _difference of differences) {
+          if (_difference === difference) frequency++;
+          else {
+            differenceFrequencies.push
+              ({difference: difference, frequency: frequency});
+            if (frequency > maximum) maximum = frequency;
+            difference = _difference;
+            frequency = 1;
+          }
+        }
+        this.log(differenceFrequencies);
+        this.log(maximum);
+      }
+      differenceFrequencies.push(null);
+      const cutoff = maximum / 3;
+
+      {
+        let total = 0;
+        let count = 0;
+        let current = null;
+        let difference;
+        let frequency;
+        for (const differenceFrequency of differenceFrequencies) {
+          frequency = differenceFrequency.frequency;
+          if (frequency > cutoff) {
+            if (current === null) current = differenceFrequency.difference - 1;
+            current++;
+            difference = differenceFrequency.difference;
+            if (current !== difference) break;
+            total += difference * frequency;
+            count += frequency;
+          }
+        }
+        this.log([total, count, total / count]);
+      }
+
+      this.clicked = false;
+    }
+
     requestAnimationFrame(this.renderBound);
+  }
+
+  log(message) {
+    fetch(
+      "",
+      {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(message)
+      }
+    );
   }
 }(canvas).load();
