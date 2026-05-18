@@ -8,6 +8,7 @@ new class {
   static get SIZE_BUFFER() {return 256;}
   static get CLEARANCE() {return 5;}
   static get THRESHOLD() {return 1;}
+  static get CUTOFF() {return 3;}
 
   constructor(_canvas) {this.canvas = _canvas;}
 
@@ -145,55 +146,71 @@ new class {
 
     if (this.clicked) {
       const lengthPeaks = peaks.length;
-      const differences = new Array((lengthPeaks * (lengthPeaks - 1) / 2) + 1);
-      let differenceIndex = 0;
-      let second;
-      for (let first = 1; first < lengthPeaks; first++)
-        for (second = 0; second < first; second++)
-          differences[differenceIndex++]
-            = Math.abs(peaks[first] - peaks[second]);
-      differences.sort((_first, _second) => _first - _second);
+      const differences = new Array(lengthPeaks * (lengthPeaks - 1) / 2);
+      const differencePeaks = new Array
+        (Math.max(...peaks) - Math.min(...peaks) + 1).fill(Infinity);
+      {
+        let differenceIndex = 0;
+        let second;
+        let difference;
+        let peakFirst;
+        let peakSecond;
+        for (let first = 1; first < lengthPeaks; first++)
+          for (second = 0; second < first; second++) {
+            peakFirst = peaks[first];
+            peakSecond = peaks[second];
+            difference = Math.abs(peakFirst - peakSecond);
+            differences[differenceIndex++] = difference;
+            differencePeaks[difference]
+              = Math.min(differencePeaks[difference], peakFirst, peakSecond);
+          }
+        differences.sort((_first, _second) => _first - _second);
+        differences.push(null);
+      }
 
-      const differenceFrequencies = new Array();
+      const differenceBins = new Array();
       let maximum = 0;
       {
         let difference = differences[0];
-        let frequency = 0;
+        let bin = 0;
         for (const _difference of differences) {
-          if (_difference === difference) frequency++;
+          if (_difference === difference) bin++;
           else {
-            differenceFrequencies.push
-              ({difference: difference, frequency: frequency});
-            if (frequency > maximum) maximum = frequency;
+            differenceBins.push
+              ({difference: difference, bin: bin});
+            if (bin > maximum) maximum = bin;
             difference = _difference;
-            frequency = 1;
+            bin = 1;
           }
         }
-        this.log(differenceFrequencies);
-        this.log(maximum);
       }
-      differenceFrequencies.push(null);
-      const cutoff = maximum / 3;
+      differenceBins.push(null);
+      const cutoff = maximum / this.constructor.CUTOFF;
 
+      let cluster = [];
       {
         let total = 0;
         let count = 0;
         let current = null;
         let difference;
-        let frequency;
-        for (const differenceFrequency of differenceFrequencies) {
-          frequency = differenceFrequency.frequency;
-          if (frequency > cutoff) {
-            if (current === null) current = differenceFrequency.difference - 1;
+        let bin;
+        for (const differenceBin of differenceBins) {
+          bin = differenceBin.bin;
+          if (bin > cutoff) {
+            if (current === null) current = differenceBin.difference - 1;
             current++;
-            difference = differenceFrequency.difference;
+            difference = differenceBin.difference;
             if (current !== difference) break;
-            total += difference * frequency;
-            count += frequency;
+            cluster.push(current);
+            total += difference * bin;
+            count += bin;
           }
         }
-        this.log([total, count, total / count]);
       }
+      const offset
+        = Math.min(...cluster.map(difference => differencePeaks[difference]));
+      this.log(peaks);
+      this.log(offset);
 
       this.clicked = false;
     }
