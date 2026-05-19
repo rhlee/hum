@@ -64,84 +64,86 @@ new class {
   }
 
   render(time) {
-    const constructor = this.constructor;
-    const analyser = this.analyser;
-
-    const _window = this.window;
-    const lengthWindow = _window.length;
-    this.end = (this.end + 1) % lengthWindow;
-    const frame = _window[this.end];
-    if (frame.used) return;
-    frame.used = true;
-    frame.time = time;
-    const data = frame.data;
-    analyser.getFloatFrequencyData(data);
-    while (time - _window[this.start].time > constructor.SIZE_WINDOW) {
-      _window[this.start].used = false;
-      this.start = (this.start + 1) % lengthWindow;
-    }
-
-    const context = this.context;
-    const _canvas = this.canvas;
-    const length = _canvas.width;
-    const height = _canvas.height;
-    const ceiling = analyser.maxDecibels;
-    const floor = analyser.minDecibels;
-    context.clearRect(0, 0, length, height);
-    context.fillStyle = 'black';
-    context.fillRect(0, 0, length, height);
-
-    const start = this.start;
-    const thisEnd = this.end;
-    const end = 1 + (thisEnd > start? thisEnd : thisEnd + lengthWindow);
-    const total = new Float32Array(length);
-    for (let indexFrame = start; indexFrame < end; indexFrame++) {
-      const data = _window[indexFrame % lengthWindow].data;
-      for (let indexBin = 0; indexBin < length; indexBin++)
-        total[indexBin] += data[indexBin];
-    }
-
-    const count = end - start;
-    let average;
-    const averages = new Float32Array(length);
-    const boundLower = this.boundLower;
-    const boundUpper = this.boundUpper;
-    const clearance = constructor.CLEARANCE;
-    let middle;
-    let indexMiddle;
-    const threshold = this.threshold;
-    const clearanceWidth = clearance * 2 + 1;
-    const peaksBoolean = new Array(length);
     const peaks = [];
-    let peak;
+    {
+      const constructor = this.constructor;
+      const analyser = this.analyser;
 
-    context.fillStyle = 'red';
-    for (let indexBin = 0; indexBin < length; indexBin++) {
-      average = averages[indexBin] = total[indexBin] / count;
-      if (indexBin > boundLower && indexBin < boundUpper) {
-        indexMiddle = indexBin - clearance;
-        middle = averages[indexMiddle];
-        peaksBoolean[indexMiddle]
-          = middle > threshold &&
-          averages[indexMiddle - 1] < middle &&
-          middle > averages[indexMiddle + 1]
-            && Math.max(
-              ...averages.slice(indexBin + 1 - clearanceWidth, indexBin + 1)
-            )
-            === middle &&
-          peaks.push(indexBin);
+      const _window = this.window;
+      const lengthWindow = _window.length;
+      this.end = (this.end + 1) % lengthWindow;
+      const frame = _window[this.end];
+      if (frame.used) return;
+      frame.used = true;
+      frame.time = time;
+      const data = frame.data;
+      analyser.getFloatFrequencyData(data);
+      while (time - _window[this.start].time > constructor.SIZE_WINDOW) {
+        _window[this.start].used = false;
+        this.start = (this.start + 1) % lengthWindow;
       }
-    }
 
-    context.fillStyle = 'red';
-    for (let indexBin = 0; indexBin < length; indexBin++) {
-      if (peaksBoolean[indexBin]) {
-        context.fillStyle = 'purple';
-        context.fillRect(indexBin, 0, 1, ceiling - floor);
-        context.fillStyle = 'red';
+      const context = this.context;
+      const _canvas = this.canvas;
+      const length = _canvas.width;
+      const height = _canvas.height;
+      const ceiling = analyser.maxDecibels;
+      const floor = analyser.minDecibels;
+      context.clearRect(0, 0, length, height);
+      context.fillStyle = 'black';
+      context.fillRect(0, 0, length, height);
+
+      const start = this.start;
+      const thisEnd = this.end;
+      const end = 1 + (thisEnd > start? thisEnd : thisEnd + lengthWindow);
+      const total = new Float32Array(length);
+      for (let indexFrame = start; indexFrame < end; indexFrame++) {
+        const data = _window[indexFrame % lengthWindow].data;
+        for (let indexBin = 0; indexBin < length; indexBin++)
+          total[indexBin] += data[indexBin];
       }
-      average = averages[indexBin];
-      context.fillRect(indexBin, ceiling - average, 1, average - floor);
+
+      const count = end - start;
+      let average;
+      const averages = new Float32Array(length);
+      const boundLower = this.boundLower;
+      const boundUpper = this.boundUpper;
+      const clearance = constructor.CLEARANCE;
+      let middle;
+      let indexMiddle;
+      const threshold = this.threshold;
+      const clearanceWidth = clearance * 2 + 1;
+      const peaksBoolean = new Array(length);
+      let peak;
+
+      context.fillStyle = 'red';
+      for (let indexBin = 0; indexBin < length; indexBin++) {
+        average = averages[indexBin] = total[indexBin] / count;
+        if (indexBin > boundLower && indexBin < boundUpper) {
+          indexMiddle = indexBin - clearance;
+          middle = averages[indexMiddle];
+          peaksBoolean[indexMiddle]
+            = middle > threshold &&
+            averages[indexMiddle - 1] < middle &&
+            middle > averages[indexMiddle + 1]
+              && Math.max(
+                ...averages.slice(indexBin + 1 - clearanceWidth, indexBin + 1)
+              )
+              === middle &&
+            peaks.push(indexBin);
+        }
+      }
+
+      context.fillStyle = 'red';
+      for (let indexBin = 0; indexBin < length; indexBin++) {
+        if (peaksBoolean[indexBin]) {
+          context.fillStyle = 'purple';
+          context.fillRect(indexBin, 0, 1, ceiling - floor);
+          context.fillStyle = 'red';
+        }
+        average = averages[indexBin];
+        context.fillRect(indexBin, ceiling - average, 1, average - floor);
+      }
     }
 
     if (this.clicked) {
@@ -188,9 +190,9 @@ new class {
       const cutoff = maximum / this.constructor.CUTOFF;
 
       let cluster = [];
+      let total = 0;
+      let count = 0;
       {
-        let total = 0;
-        let count = 0;
         let current = null;
         let difference;
         let bin;
@@ -209,8 +211,8 @@ new class {
       }
       const offset
         = Math.min(...cluster.map(difference => differencePeaks[difference]));
-      this.log(peaks);
-      this.log(offset);
+      const interval = total / count;
+      this.log({peaks: peaks, offset: offset, interval: interval});
 
       this.clicked = false;
     }
