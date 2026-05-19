@@ -9,6 +9,7 @@ new class {
   static get CLEARANCE() {return 5;}
   static get THRESHOLD() {return 1;}
   static get CUTOFF() {return 3;}
+  static get TOLERANCE() {return 1;}
 
   constructor(_canvas) {this.canvas = _canvas;}
 
@@ -211,8 +212,18 @@ new class {
       }
       const offset
         = Math.min(...cluster.map(difference => differencePeaks[difference]));
-      const interval = total / count;
-      this.log({peaks: peaks, offset: offset, interval: interval});
+      let interval = total / count;
+      peaks.splice(peaks.indexOf(offset), 1);
+      const tolerance = this.constructor.TOLERANCE;
+      let distance;
+      let deviation;
+      for (let peak of peaks) {
+        distance = Math.abs(peak - offset);
+        deviation = distance % interval;
+        if (deviation <= tolerance || interval - deviation <= tolerance)
+          interval = distance / Math.round(distance / interval);
+      }
+      this.log(interval);
 
       this.clicked = false;
     }
