@@ -57,11 +57,31 @@ new class {
     this.context = _canvas.getContext('2d');
     _canvas.width = width;
     _canvas.height = analyser.maxDecibels - analyser.minDecibels;
-    _canvas.onclick = () => {this.clicked = true;};
+    const binsRaw = localStorage.getItem('bins');
+    if (binsRaw) {
+      const bins = JSON.parse(binsRaw);
+      console.log(bins);
+      const sigma = this.constructor.CLEARANCE / 3;
+      const peaks = [];
+      for (let peak = bins.offset; peak < width; peak += bins.interval)
+        peaks.push(Math.round(peak));
+      const distribution = new Array(width * 2);
+      const peakCount = peaks.length;
+      for (let bin = -width; bin < width; bin++)
+        distribution[bin + width]
+          = Math.exp(((bin / sigma) ** 2) / -2);
+      const weights = new Array(width).fill(0);
+      for (let bin = 0; bin < width; bin++)
+        for (const peak of peaks)
+          weights[bin] += distribution[bin + width - peak];
+      this.weights = weights;
+      console.log(weights);
+    }
 
     const renderBound = this.render.bind(this);
     this.renderBound = renderBound;
     requestAnimationFrame(renderBound);
+    _canvas.onclick = () => {this.clicked = true;};
   }
 
   render(time) {
@@ -86,27 +106,27 @@ new class {
 
       const context = this.context;
       const _canvas = this.canvas;
-      const length = _canvas.width;
+      const width = _canvas.width;
       const height = _canvas.height;
       const ceiling = analyser.maxDecibels;
       const floor = analyser.minDecibels;
-      context.clearRect(0, 0, length, height);
+      context.clearRect(0, 0, width, height);
       context.fillStyle = 'black';
-      context.fillRect(0, 0, length, height);
+      context.fillRect(0, 0, width, height);
 
       const start = this.start;
       const thisEnd = this.end;
       const end = 1 + (thisEnd > start? thisEnd : thisEnd + lengthWindow);
-      const total = new Float32Array(length);
+      const total = new Float32Array(width);
       for (let indexFrame = start; indexFrame < end; indexFrame++) {
         const data = _window[indexFrame % lengthWindow].data;
-        for (let indexBin = 0; indexBin < length; indexBin++)
+        for (let indexBin = 0; indexBin < width; indexBin++)
           total[indexBin] += data[indexBin];
       }
 
       const count = end - start;
       let average;
-      const averages = new Float32Array(length);
+      const averages = new Float32Array(width);
       const boundLower = this.boundLower;
       const boundUpper = this.boundUpper;
       const clearance = constructor.CLEARANCE;
@@ -114,11 +134,10 @@ new class {
       let indexMiddle;
       const threshold = this.threshold;
       const clearanceWidth = clearance * 2 + 1;
-      const peaksBoolean = new Array(length);
+      const peaksBoolean = new Array(width);
       let peak;
 
-      context.fillStyle = 'red';
-      for (let indexBin = 0; indexBin < length; indexBin++) {
+      for (let indexBin = 0; indexBin < width; indexBin++) {
         average = averages[indexBin] = total[indexBin] / count;
         if (indexBin > boundLower && indexBin < boundUpper) {
           indexMiddle = indexBin - clearance;
@@ -131,18 +150,23 @@ new class {
                 ...averages.slice(indexBin + 1 - clearanceWidth, indexBin + 1)
               )
               === middle &&
-            peaks.push(indexBin);
+            peaks.push(indexMiddle);
         }
       }
 
-      context.fillStyle = 'red';
-      for (let indexBin = 0; indexBin < length; indexBin++) {
+      const weights = this.weights;
+      let weight;
+      for (let indexBin = 0; indexBin < width; indexBin++) {
+        context.fillStyle = 'purple';
+        weight = weights[indexBin] * height;
+        context.fillRect(indexBin, height - weight, 1, weight);
         if (peaksBoolean[indexBin]) {
-          context.fillStyle = 'purple';
-          context.fillRect(indexBin, 0, 1, ceiling - floor);
+          context.fillStyle = 'orange';
+          context.fillRect(indexBin, 0, 1, height);
           context.fillStyle = 'red';
         }
         average = averages[indexBin];
+        context.fillStyle = 'red';
         context.fillRect(indexBin, ceiling - average, 1, average - floor);
       }
     }
@@ -223,7 +247,10 @@ new class {
         if (deviation <= tolerance || interval - deviation <= tolerance)
           interval = distance / Math.round(distance / interval);
       }
-      this.log(interval);
+      localStorage.setItem(
+        'bins',
+        JSON.stringify({offset: offset % interval, interval: interval})
+      );
 
       this.clicked = false;
     }
