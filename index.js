@@ -81,7 +81,6 @@ new class {
     const renderBound = this.render.bind(this);
     this.renderBound = renderBound;
     requestAnimationFrame(renderBound);
-    _canvas.onclick = () => {this.clicked = true;};
   }
 
   render(time) {
@@ -171,8 +170,8 @@ new class {
       }
     }
 
-    if (this.clicked) {
-      const lengthPeaks = peaks.length;
+    const lengthPeaks = peaks.length;
+    if (lengthPeaks > 1) {
       const differences = new Array(lengthPeaks * (lengthPeaks - 1) / 2);
       const differencePeaks = new Array
         (Math.max(...peaks) - Math.min(...peaks) + 1).fill(Infinity);
@@ -195,23 +194,23 @@ new class {
         differences.push(null);
       }
 
-      const differenceBins = new Array();
+      const differenceFrequencies = new Array();
       let maximum = 0;
       {
         let difference = differences[0];
-        let bin = 0;
+        let frequency = 0;
         for (const _difference of differences) {
-          if (_difference === difference) bin++;
+          if (_difference === difference) frequency++;
           else {
-            differenceBins.push
-              ({difference: difference, bin: bin});
-            if (bin > maximum) maximum = bin;
+            differenceFrequencies.push
+              ({difference: difference, frequency: frequency});
+            if (frequency > maximum) maximum = frequency;
             difference = _difference;
-            bin = 1;
+            frequency = 1;
           }
         }
       }
-      differenceBins.push(null);
+      differenceFrequencies.push({frequency: 0});
       const cutoff = maximum / this.constructor.CUTOFF;
 
       let cluster = [];
@@ -220,17 +219,17 @@ new class {
       {
         let current = null;
         let difference;
-        let bin;
-        for (const differenceBin of differenceBins) {
-          bin = differenceBin.bin;
-          if (bin > cutoff) {
-            if (current === null) current = differenceBin.difference - 1;
+        let frequency;
+        for (const differenceFrequency of differenceFrequencies) {
+          frequency = differenceFrequency.frequency;
+          if (frequency > cutoff) {
+            if (current === null) current = differenceFrequency.difference - 1;
             current++;
-            difference = differenceBin.difference;
+            difference = differenceFrequency.difference;
             if (current !== difference) break;
             cluster.push(current);
-            total += difference * bin;
-            count += bin;
+            total += difference * frequency;
+            count += frequency;
           }
         }
       }
@@ -247,12 +246,8 @@ new class {
         if (deviation <= tolerance || interval - deviation <= tolerance)
           interval = distance / Math.round(distance / interval);
       }
-      localStorage.setItem(
-        'bins',
-        JSON.stringify({offset: offset % interval, interval: interval})
-      );
 
-      this.clicked = false;
+      console.log(offset % interval, interval, peaks.length);
     }
 
     requestAnimationFrame(this.renderBound);
