@@ -8,10 +8,10 @@ new class {
   static get SIZE_LISTENING() {return 1000;}
   static get SIZE_BUFFER() {return 256;}
   static get CLEARANCE() {return 5;}
-  static get THRESHOLD() {return 1;}
-  static get CUTOFF() {return 3;}
+  static get THRESHOLD_AMPLITUDE() {return 1;}
+  static get THRESHOLD_CLUSTER() {return 3;}
   static get HOLD() {return 3000;}
-  static get SCORE_MAXIMUM() {return 2;}
+  static get SCALE() {return 10;}
 
   constructor(_canvas) {this.canvas = _canvas;}
 
@@ -54,33 +54,46 @@ new class {
     const clearance = constructor.CLEARANCE;
     this.boundLower = clearance * 2 - 1;
     this.boundUpper = width - clearance;
-    this.threshold = constructor.THRESHOLD + analyser.minDecibels;
+    const floor = analyser.minDecibels;
+    const ceiling = analyser.maxDecibels;
+    this.thresholdAmplitude = constructor.THRESHOLD_AMPLITUDE + floor;
 
     const _canvas = this.canvas;
     this.context = _canvas.getContext('2d');
     _canvas.width = width;
     _canvas.height = analyser.maxDecibels - analyser.minDecibels;
 
-    saveClear.addEventListener(
-      'pointerup',
-      () => {
-        if (this.target) {
-          localStorage.clear('target');
-          this.update();
-        } else this.save = true;
-      }
-    );
+    this.criterion = new criteria.amplitude(clearance);
+
+    saveClear.onclick = () => {
+      if (this.target) {
+        localStorage.clear('target');
+        this.update();
+      } else this.save = true;
+    };
     this.save = false;
     this.update();
 
-    this.criterion = new criteria.amplitude(clearance);
-
-    const down = event => event.target.classList.add('pressed');
-    const up = event => event.target.classList.remove('pressed');
-    Array.from(document.querySelectorAll('.button')).forEach(button => {
-      button.addEventListener('pointerdown', down);
-      button.addEventListener('pointerup', up);
-    });
+    this.thresholdScore = Number(localStorage.getItem('threshold')) ?? floor;
+    const constrain = value => Math.min(Math.max(value, floor), ceiling);
+    const scale = constructor.SCALE;
+    const move = event => this.thresholdScore = Math.round(Math.min(
+      Math.max(
+        this.thresholdScoreOriginal + (this.y - event.clientY) / scale, floor
+      ),
+      ceiling
+    ));
+    const removal = () => {
+      pad.removeEventListener('pointermove', move);
+      localStorage.setItem('threshold', String(this.thresholdScore));
+    };
+    pad.onpointerdown = event => {
+      pad.setPointerCapture(event.pointerId);
+      pad.addEventListener('pointermove', move);
+      this.y = event.clientY;
+      this.thresholdScoreOriginal = this.thresholdScore;
+    };
+    pad.onlostpointercapture = pad.onpointerup = removal;
 
     const renderBound = this.render.bind(this);
     this.renderBound = renderBound;
@@ -136,7 +149,7 @@ new class {
       const boundUpper = this.boundUpper;
       let middle;
       let indexMiddle;
-      const threshold = this.threshold;
+      const thresholdAmplitude = this.thresholdAmplitude;
       let slice;
       const criterion = this.criterion;
       const evaluate = criterion.evaluate.bind(criterion);
@@ -148,7 +161,7 @@ new class {
           middle = averages[indexMiddle];
           slice = averages.slice(indexBin + 1 - clearanceWidth, indexBin + 1);
           if (
-            middle > threshold
+            middle > thresholdAmplitude
             && averages[indexMiddle - 1] < middle
             && middle > averages[indexMiddle + 1]
             && Math.max(...slice) === middle
@@ -206,7 +219,7 @@ new class {
         }
       }
       differenceFrequencies.push({frequency: 0});
-      const cutoff = maximum / this.constructor.CUTOFF;
+      const thresholdCluster = maximum / this.constructor.THRESHOLD_CLUSTER;
 
       let cluster = [];
       let total = 0;
@@ -217,7 +230,7 @@ new class {
         let frequency;
         for (const differenceFrequency of differenceFrequencies) {
           frequency = differenceFrequency.frequency;
-          if (frequency > cutoff) {
+          if (frequency > thresholdCluster) {
             if (current === null) current = differenceFrequency.difference - 1;
             current++;
             difference = differenceFrequency.difference;
@@ -269,6 +282,9 @@ new class {
         }
       }
     }
+
+    context.fillStyle = 'white';
+    context.fillRect(0, ceiling - this.thresholdScore - 0.5, width, 1);
 
     requestAnimationFrame(this.renderBound);
   }
