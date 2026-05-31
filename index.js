@@ -61,25 +61,26 @@ new class {
     _canvas.width = width;
     _canvas.height = analyser.maxDecibels - analyser.minDecibels;
 
-    const target = JSON.parse(localStorage.getItem('target'));
-    this.target = target;
-    if (target) {
-      this.background = 'black';
-      this.sizeSmoothing = constructor.SIZE_SMOOTHING;
-    } else {
-      this.background = 'gray';
-      this.sizeSmoothing = constructor.SIZE_LISTENING;
-    }
-
+    saveClear.addEventListener(
+      'pointerup',
+      () => {
+        if (this.target) {
+          localStorage.clear('target');
+          this.update();
+        } else this.save = true;
+      }
+    );
     this.save = false;
-    document.onpointerdown = event => {this.downtime = event.timeStamp;};
-    document.onpointerup = event => {
-      if (event.timeStamp - this.downtime > this.constructor.HOLD)
-        localStorage.clear();
-      else this.save = true;
-    };
+    this.update();
 
     this.criterion = new criteria.amplitude(clearance);
+
+    const down = event => event.target.classList.add('pressed');
+    const up = event => event.target.classList.remove('pressed');
+    Array.from(document.querySelectorAll('.button')).forEach(button => {
+      button.addEventListener('pointerdown', down);
+      button.addEventListener('pointerup', up);
+    });
 
     const renderBound = this.render.bind(this);
     this.renderBound = renderBound;
@@ -160,7 +161,7 @@ new class {
     }
 
     context.clearRect(0, 0, width, height);
-    context.fillStyle = this.background;
+    context.fillStyle = 'black';
     context.fillRect(0, 0, width, height);
 
     const lengthPeaks = peaks.length;
@@ -232,27 +233,10 @@ new class {
       let interval = total / count;
       peaks.splice(peaks.indexOf(offset), 1);
 
-      const target = this.target;
-      let extra;
-      if (target) {
-        const interval = target.interval;
-        const score
-          = peaks.length / target.peaks
-          * (1 - Math.abs(interval - interval) / interval)
-          / 2;
-
-        context.fillStyle = 'gray';
-        context.fillRect(0, height * (1 - score), width, height * score);
-
-        extra = ["", `score: ${score}`];
-      } else extra = [];
       output.innerHTML = [
-        ...[
-          `offset: ${offset % interval}`,
-          `interval: ${interval}`,
-          `peaks: ${peaks.length}`,
-        ],
-        ...extra
+        `offset: ${offset % interval}`,
+        `interval: ${interval}`,
+        `peaks: ${peaks.length}`,
       ].join("\n");
 
       if (this.save) {
@@ -263,6 +247,7 @@ new class {
           })
         );
         this.save = false;
+        this.update();
       };
     }
 
@@ -280,13 +265,20 @@ new class {
         context.fillRect(indexBin, ceiling - average, 1, average - floor);
         if (peak) {
           context.fillStyle = 'green';
-          console.log(peak.score);
           context.fillRect(indexBin, height - peak.score, 1, peak.score);
         }
       }
     }
 
     requestAnimationFrame(this.renderBound);
+  }
+
+  update() {
+    const target = JSON.parse(localStorage.getItem('target'));
+    this.target = target;
+    this.sizeSmoothing
+      = target? constructor.SIZE_SMOOTHING : constructor.SIZE_LISTENING;
+    saveClear.innerHTML = target? "🧹" : "✏️";
   }
 }(canvas).load();
 

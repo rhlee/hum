@@ -3,10 +3,48 @@ body {
   display: flex;
   flex-direction: column;
   height: 100vh;
+  width: 100wh;
+  font-size: 2em;
+  touch-action: manipulation;
+  user-select: none;
 
   & > * {
-    flex-grow: 1;
     flex-basis: 0;
     margin: 0;
+  }
+
+  #canvas {
+    flex-grow: 2;
+  }
+
+  #output {
+    flex-grow: 1;
+  }
+
+  #controls {
+    flex-grow: 2;
+    display: flex;
+    gap: 10px;
+
+    & * {
+      display: flex;
+      justify-content: center;
+      align-items: stretch;
+      gap: 10px;
+      flex-basis: 0;
+      flex-grow: 1;
+    }
+
+    #spinner {
+      flex-direction: column;
+    }
+
+    .button {
+      align-items: center;
+
+      &:not(.pressed) {
+        background: gray;
+      }
+    }
   }
 }
