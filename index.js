@@ -65,15 +65,6 @@ new class {
 
     this.criterion = new criteria.amplitude(clearance);
 
-    saveClear.onclick = () => {
-      if (this.target) {
-        localStorage.clear('target');
-        this.update();
-      } else this.save = true;
-    };
-    this.save = false;
-    this.update();
-
     this.thresholdScore = Number(localStorage.getItem('threshold')) ?? floor;
     const constrain = value => Math.min(Math.max(value, floor), ceiling);
     const scale = constructor.SCALE;
@@ -83,17 +74,31 @@ new class {
       ),
       ceiling
     ));
-    const removal = () => {
+    const remove = () => {
       pad.removeEventListener('pointermove', move);
       localStorage.setItem('threshold', String(this.thresholdScore));
     };
-    pad.onpointerdown = event => {
+    const handleDown = event => {
       pad.setPointerCapture(event.pointerId);
       pad.addEventListener('pointermove', move);
       this.y = event.clientY;
       this.thresholdScoreOriginal = this.thresholdScore;
     };
-    pad.onlostpointercapture = pad.onpointerup = removal;
+    this.events = {
+      'pointerdown': handleDown,
+      'lostpointercapture': remove,
+      'pointerup': remove
+    };
+    saveClear.onclick = () => {
+      if (this.interval) {
+        localStorage.clear('interval');
+        this.update();
+        this.toggle();
+      } else this.save = true;
+    };
+    this.save = false;
+    this.update();
+    this.toggle();
 
     const renderBound = this.render.bind(this);
     this.renderBound = renderBound;
@@ -109,7 +114,8 @@ new class {
     const analyser = this.analyser;
     const ceiling = analyser.maxDecibels;
     const floor = analyser.minDecibels;
-    const peakBins = new Array(width);
+    const candidateBins = new Array(width);
+    const candidates = [];
     const peaks = [];
     const averages = new Float32Array(width);
     const clearance = constructor.CLEARANCE;
@@ -165,10 +171,10 @@ new class {
             && averages[indexMiddle - 1] < middle
             && middle > averages[indexMiddle + 1]
             && Math.max(...slice) === middle
-          ) peaks.push(
-            peakBins[indexMiddle] = {bin: indexMiddle, score: evaluate(slice)}
+          ) candidates.push(
+            candidateBins[indexMiddle] = {bin: indexMiddle, score: evaluate(slice)}
           );
-          else peakBins[indexMiddle] = null;
+          else candidateBins[indexMiddle] = null;
         }
       }
     }
@@ -177,26 +183,26 @@ new class {
     context.fillStyle = 'black';
     context.fillRect(0, 0, width, height);
 
-    const lengthPeaks = peaks.length;
-    if (lengthPeaks > 1) {
-      const differences = new Array(lengthPeaks * (lengthPeaks - 1) / 2);
-      const peaksBin = peaks.map(peak => peak.bin);
-      const differencePeaks = new Array
-        (Math.max(...peaksBin) - Math.min(...peaksBin) + 1).fill(Infinity);
+    const lengthCandidates = candidates.length;
+    if (lengthCandidates > 1) {
+      const differences = new Array(lengthCandidates * (lengthCandidates - 1) / 2);
+      const candidatesBin = candidates.map(candidate => candidate.bin);
+      const differenceCandidates = new Array
+        (Math.max(...candidatesBin) - Math.min(...candidatesBin) + 1).fill(Infinity);
       {
         let differenceIndex = 0;
         let second;
         let difference;
-        let peakFirst;
-        let peakSecond;
-        for (let first = 1; first < lengthPeaks; first++)
+        let candidateFirst;
+        let candidateSecond;
+        for (let first = 1; first < lengthCandidates; first++)
           for (second = 0; second < first; second++) {
-            peakFirst = peaks[first].bin;
-            peakSecond = peaks[second].bin;
-            difference = Math.abs(peakFirst - peakSecond);
+            candidateFirst = candidates[first].bin;
+            candidateSecond = candidates[second].bin;
+            difference = Math.abs(candidateFirst - candidateSecond);
             differences[differenceIndex++] = difference;
-            differencePeaks[difference]
-              = Math.min(differencePeaks[difference], peakFirst, peakSecond);
+            differenceCandidates[difference]
+              = Math.min(differenceCandidates[difference], candidateFirst, candidateSecond);
           }
         differences.sort((_first, _second) => _first - _second);
         differences.push(null);
@@ -242,59 +248,65 @@ new class {
         }
       }
       const offset
-        = Math.min(...cluster.map(difference => differencePeaks[difference]));
-      let interval = total / count;
-      peaks.splice(peaks.indexOf(offset), 1);
+        = Math.min(...cluster.map(difference => differenceCandidates[difference]));
+      let _interval = total / count;
 
-      output.innerHTML = [
-        `offset: ${offset % interval}`,
-        `interval: ${interval}`,
-        `peaks: ${peaks.length}`,
-      ].join("\n");
+      interval.innerHTML = Math.round(_interval * 10) / 10;
 
       if (this.save) {
-        localStorage.setItem(
-          'target',
-          JSON.stringify({
-            offset: interval % offset, interval: interval, peaks: peaks.length
-          })
-        );
+        localStorage.setItem('interval', _interval);
         this.save = false;
         this.update();
+        this.toggle();
       };
     }
 
     {
       let average;
-      let peak;
+      let candidate;
       for (let indexBin = 0; indexBin < width; indexBin++) {
-        peak = peakBins[indexBin];
-        if (peak) {
+        candidate = candidateBins[indexBin];
+        if (candidate) {
           context.fillStyle = 'purple';
           context.fillRect(indexBin, 0, 1, height);
         }
         average = averages[indexBin];
         context.fillStyle = 'red';
         context.fillRect(indexBin, ceiling - average, 1, average - floor);
-        if (peak) {
+        if (candidate) {
           context.fillStyle = 'green';
-          context.fillRect(indexBin, height - peak.score, 1, peak.score);
+          context.fillRect(indexBin, height - candidate.score, 1, candidate.score);
         }
       }
     }
 
-    context.fillStyle = 'white';
-    context.fillRect(0, ceiling - this.thresholdScore - 0.5, width, 1);
+    if (this.interval) {
+      context.fillStyle = 'white';
+      context.fillRect(0, ceiling - this.thresholdScore - 0.5, width, 1);
+    }
 
     requestAnimationFrame(this.renderBound);
   }
 
   update() {
-    const target = JSON.parse(localStorage.getItem('target'));
-    this.target = target;
+    const _interval = Number(localStorage.getItem('interval'));
+    this.interval = _interval;
     this.sizeSmoothing
-      = target? constructor.SIZE_SMOOTHING : constructor.SIZE_LISTENING;
-    saveClear.innerHTML = target? "🧹" : "✏️";
+      = _interval? constructor.SIZE_SMOOTHING : constructor.SIZE_LISTENING;
+    saveClear.innerHTML = _interval? "🧹" : "✏️";
+  }
+
+  toggle() {
+    let method;
+    if (this.interval) {
+      method = pad.addEventListener;
+      pad.classList.remove('disabled');
+    } else {
+      method = pad.removeEventListener;
+      pad.classList.add('disabled');
+    }
+    for (const [event, handler] of Object.entries(this.events))
+      method.bind(pad)(event, handler);
   }
 }(canvas).load();
 

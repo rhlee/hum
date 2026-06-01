@@ -17,8 +17,11 @@ body {
     flex-grow: 2;
   }
 
-  #output {
+  #interval {
     flex-grow: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
   }
 
   #controls {
@@ -40,7 +43,11 @@ body {
 
     #pad {
       background: gray;
-      touch-action: none;
+      //touch-action: none;
+
+      &.disabled {
+        color: white;
+      }
     }
   }
 }
