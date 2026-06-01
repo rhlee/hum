@@ -43,7 +43,7 @@ body {
 
     #pad {
       background: gray;
-      //touch-action: none;
+      touch-action: none;
 
       &.disabled {
         color: white;
