@@ -74,15 +74,15 @@ new class {
       pad.removeEventListener('pointermove', move);
       localStorage.setItem('threshold', String(this.thresholdScore));
     };
-    const handleDown = event => {
-      pad.setPointerCapture(event.pointerId);
-      pad.addEventListener('pointermove', move);
-      this.y = event.clientY;
-      this.thresholdScoreOriginal = this.thresholdScore;
-    };
-    this.events = {
-      'pointerdown': handleDown,
-      'lostpointercapture': remove,
+    this.handlers = {
+      'pointerdown': event => {
+        this.drag = true;
+        pad.setPointerCapture(event.pointerId);
+        pad.addEventListener('pointermove', move);
+        this.y = event.clientY;
+        this.thresholdScoreOriginal = this.thresholdScore;
+      },
+      'lostpointercapture': event => this.drag? undefined : remove(),
       'pointerup': remove
     };
     saveClear.onclick = () => {
@@ -308,7 +308,7 @@ new class {
       method = pad.removeEventListener;
       pad.classList.add('disabled');
     }
-    for (const [event, handler] of Object.entries(this.events))
+    for (const [event, handler] of Object.entries(this.handlers))
       method.bind(pad)(event, handler);
   }
 }(canvas).load();
