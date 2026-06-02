@@ -111,7 +111,6 @@ new class {
     const ceiling = analyser.maxDecibels;
     const floor = analyser.minDecibels;
     const candidateBins = new Array(width);
-    const candidates = [];
     const averages = new Float32Array(width);
     const clearance = constructor.CLEARANCE;
     const clearanceWidth = clearance * 2 + 1;
@@ -161,15 +160,14 @@ new class {
           indexMiddle = indexBin - clearance;
           middle = averages[indexMiddle];
           slice = averages.slice(indexBin + 1 - clearanceWidth, indexBin + 1);
-          if (
+          candidateBins[indexMiddle]
+            =
             middle > thresholdAmplitude
             && averages[indexMiddle - 1] < middle
             && middle > averages[indexMiddle + 1]
-            && Math.max(...slice) === middle
-          ) candidates.push(
-            candidateBins[indexMiddle] = {bin: indexMiddle, score: evaluate(slice)}
-          );
-          else candidateBins[indexMiddle] = null;
+            && Math.max(...slice) === middle?
+              {bin: indexMiddle, score: evaluate(slice)}
+              : candidateBins[indexMiddle] = null;
         }
       }
     }
