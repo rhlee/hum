@@ -274,9 +274,7 @@ new class {
           }
         }
       }
-      let _interval = total / count;
-
-      interval.innerHTML = Math.round(_interval * 10) / 10;
+      interval.innerHTML = Math.round(total / count * 10) / 10;
 
       if (this.save) {
         localStorage.setItem('interval', _interval);
@@ -284,7 +282,7 @@ new class {
         this.update();
         this.toggle();
       };
-    }
+    } else interval.innerHTML = "";
 
     requestAnimationFrame(this.renderBound);
   }
