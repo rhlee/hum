@@ -178,12 +178,13 @@ new class {
     context.fillStyle = 'black';
     context.fillRect(0, 0, width, height);
 
+    const _interval = this.interval;
     const peaks = [];
     {
       let average;
       let candidate;
       let color;
-      const threshold = this.thresholdScore;
+      const threshold = _interval? this.thresholdScore : 0;
       for (let indexBin = 0; indexBin < width; indexBin++) {
         candidate = candidateBins[indexBin];
         if (candidate) {
@@ -205,7 +206,7 @@ new class {
       }
     }
 
-    if (this.interval) {
+    if (_interval) {
       context.fillStyle = 'white';
       context.fillRect(0, height - this.thresholdScore - 0.5, width, 1);
     }
