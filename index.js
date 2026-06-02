@@ -87,7 +87,7 @@ new class {
     };
     saveClear.onclick = () => {
       if (this.interval) {
-        localStorage.clear('interval');
+        localStorage.removeItem('interval');
         this.update();
         this.toggle();
       } else this.save = true;
