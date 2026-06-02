@@ -274,8 +274,6 @@ new class {
           }
         }
       }
-      const offset
-        = Math.min(...cluster.map(difference => differencePeaks[difference]));
       let _interval = total / count;
 
       interval.innerHTML = Math.round(_interval * 10) / 10;
