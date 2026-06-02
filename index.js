@@ -65,7 +65,8 @@ new class {
     this.criterion = new criteria.amplitude(clearance);
 
     const constrain = value => Math.min(Math.max(value, 0), height);
-    this.thresholdScore = constrain(Number(localStorage.getItem('threshold')));
+    this.thresholdScore
+      = constrain(Number(localStorage.getItem('threshold')));
     const scale = constructor.SCALE;
     const move = event => this.thresholdScore = Math.round(constrain(
       this.thresholdScoreOriginal + (this.y - event.clientY) / scale
@@ -262,7 +263,8 @@ new class {
         for (const differenceFrequency of differenceFrequencies) {
           frequency = differenceFrequency.frequency;
           if (frequency > thresholdCluster) {
-            if (current === null) current = differenceFrequency.difference - 1;
+            if (current === null)
+              current = differenceFrequency.difference - 1;
             current++;
             difference = differenceFrequency.difference;
             if (current !== difference) break;
