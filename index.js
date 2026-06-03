@@ -213,7 +213,7 @@ new class {
 
     if (intervalTarget) {
       context.fillStyle = 'white';
-      context.fillRect(0, height - this.thresholdScore - 0.5, width, 1);
+      context.fillRect(0, height - this.thresholdScore, width, 1);
     }
 
     const lengthPeaks = peaks.length;
@@ -285,7 +285,7 @@ new class {
       if (intervalTarget) frameCurrent.activated
         = intervalCurrent - intervalTarget
         < this.constructor.THRESHOLD_INTERVAL;
-      else interval.innerHTML = intervalCurrent;
+      else bar.innerHTML = intervalCurrent;
 
       if (this.save) {
         localStorage.setItem('interval', intervalCurrent);
@@ -295,7 +295,6 @@ new class {
       };
     } else {
       frameCurrent.activated = false;
-      interval.innerHTML = "";
     }
 
     if (intervalTarget) {
@@ -314,18 +313,22 @@ new class {
         for (const frameSlice of slice) if (frameSlice.activated) total += 1;
         count += slice.length;
       }
-      interval.innerHTML = (total / count);
+      bar.style.width = total / count * 100 + "%";
     }
 
     requestAnimationFrame(this.renderBound);
   }
 
   update() {
-    const _interval = Number(localStorage.getItem('interval'));
-    this.interval = _interval;
-    this.sizeSmoothing
-      = _interval? constructor.SIZE_SMOOTHING : constructor.SIZE_LISTENING;
-    saveClear.innerHTML = _interval? "🧹" : "✏️";
+    if (this.interval = Number(localStorage.getItem('interval'))) {
+      this.sizeSmoothing = constructor.SIZE_SMOOTHING;
+      saveClear.innerHTML = "🧹";
+      bar.innerHTML = "";
+    } else {
+      this.sizeSmoothing = constructor.SIZE_LISTENING;
+      saveClear.innerHTML = "✏️";
+      bar.style.removeProperty('width');
+    }
   }
 
   toggle() {

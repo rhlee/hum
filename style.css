@@ -8,6 +8,8 @@ body {
   touch-action: manipulation;
   user-select: none;
   font-family: sans-serif;
+  background: black;
+  color: white;
 
   & > * {
     flex-basis: 0;
@@ -18,11 +20,12 @@ body {
     flex-grow: 2;
   }
 
-  #interval {
+  #bar {
     flex-grow: 1;
     display: flex;
     justify-content: center;
     align-items: center;
+    background: red;
   }
 
   #controls {
