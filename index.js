@@ -10,6 +10,7 @@ new class {
   static get CLEARANCE() {return 5;}
   static get THRESHOLD_AMPLITUDE() {return 1;}
   static get THRESHOLD_CLUSTER() {return 3;}
+  static get THRESHOLD_INTERVAL() {return 1;}
   static get HOLD() {return 3000;}
   static get SCALE() {return 10;}
 
@@ -46,7 +47,12 @@ new class {
     const width = count / constructor.FOCUS ** 2;
     this.window = Array.from(
       {length: constructor.SIZE_BUFFER},
-      () => ({used: false, time: null, data: new Float32Array(count)})
+      () => ({
+        used: false,
+        time: null,
+        data: new Float32Array(count),
+        activated: false
+      })
     );
     this.end = 0;
     this.smoothing = 1;
@@ -116,15 +122,15 @@ new class {
     const clearance = constructor.CLEARANCE;
     const clearanceWidth = clearance * 2 + 1;
 
+    const _window = this.window;
+    const lengthWindow = _window.length;
+    this.end = (this.end + 1) % lengthWindow;
+    const frameCurrent = _window[this.end];
     {
-      const _window = this.window;
-      const lengthWindow = _window.length;
-      this.end = (this.end + 1) % lengthWindow;
-      const frame = _window[this.end];
-      if (frame.used) return;
-      frame.used = true;
-      frame.time = time;
-      const data = frame.data;
+      if (frameCurrent.used) return;
+      frameCurrent.used = true;
+      frameCurrent.time = time;
+      const data = frameCurrent.data;
       analyser.getFloatFrequencyData(data);
       while (time - _window[this.smoothing].time > constructor.SIZE_SMOOTHING)
         this.smoothing = (this.smoothing + 1) % lengthWindow;
@@ -177,13 +183,13 @@ new class {
     context.fillStyle = 'black';
     context.fillRect(0, 0, width, height);
 
-    const _interval = this.interval;
+    const intervalTarget = this.interval;
     const peaks = [];
     {
       let average;
       let candidate;
       let color;
-      const threshold = _interval? this.thresholdScore : 0;
+      const threshold = intervalTarget? this.thresholdScore : 0;
       for (let indexBin = 0; indexBin < width; indexBin++) {
         candidate = candidateBins[indexBin];
         if (candidate) {
@@ -205,7 +211,7 @@ new class {
       }
     }
 
-    if (_interval) {
+    if (intervalTarget) {
       context.fillStyle = 'white';
       context.fillRect(0, height - this.thresholdScore - 0.5, width, 1);
     }
@@ -274,15 +280,42 @@ new class {
           }
         }
       }
-      interval.innerHTML = Math.round(total / count * 10) / 10;
+      let intervalCurrent = Math.round(total / count * 10) / 10;
+
+      if (intervalTarget) frameCurrent.activated
+        = intervalCurrent - intervalTarget
+        < this.constructor.THRESHOLD_INTERVAL;
+      else interval.innerHTML = intervalCurrent;
 
       if (this.save) {
-        localStorage.setItem('interval', _interval);
+        localStorage.setItem('interval', intervalCurrent);
         this.save = false;
         this.update();
         this.toggle();
       };
-    } else interval.innerHTML = "";
+    } else {
+      frameCurrent.activated = false;
+      interval.innerHTML = "";
+    }
+
+    if (intervalTarget) {
+      const _window = this.window;
+      let total = 0;
+      let count = 0;
+      for (
+        const slice
+        of this.listening < this.smoothing?
+          [_window.slice(this.listening, this.smoothing)]
+          : [
+            _window.slice(this.listening, lengthWindow + 1),
+            [_window.slice(0, this.smoothing)]
+          ]
+      ) {
+        for (const frameSlice of slice) if (frameSlice.activated) total += 1;
+        count += slice.length;
+      }
+      interval.innerHTML = (total / count);
+    }
 
     requestAnimationFrame(this.renderBound);
   }
