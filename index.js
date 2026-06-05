@@ -11,6 +11,7 @@ new class {
   static get THRESHOLD_AMPLITUDE() {return 1;}
   static get THRESHOLD_CLUSTER() {return 3;}
   static get THRESHOLD_INTERVAL() {return 1;}
+  static get THRESHOLD_ACTIVATION() {return 0.9;}
   static get HOLD() {return 3000;}
   static get SCALE() {return 10;}
 
@@ -316,8 +317,9 @@ new class {
         for (const frameSlice of slice) if (frameSlice.activated) total += 1;
         count += slice.length;
       }
-      bar.style.width = total / count * 100 + "%";
-      if (total === count) {
+      const activation = total / count / constructor.THRESHOLD_ACTIVATION;
+      bar.style.width = activation * 100 + "%";
+      if (activation >= 1) {
         this.source.disconnect();
         this.analyser.disconnect();
         for (const track of this.stream.getTracks()) track.stop();
