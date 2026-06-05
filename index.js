@@ -22,16 +22,19 @@ new class {
     const constructor = this.constructor;
 
     const context = new AudioContext();
-    context.resume();
-    const source = context.createMediaStreamSource
-      (await navigator.mediaDevices.getUserMedia({
-        audio: {
-          channelCount: constructor.COUNT,
-          echoCancellation: false,
-          noiseSuppression: false,
-          autoGainControl: false
-        }
-      }));
+    this.contextAudio = context;
+    await context.resume();
+    const stream = await navigator.mediaDevices.getUserMedia({
+      audio: {
+        channelCount: constructor.COUNT,
+        echoCancellation: false,
+        noiseSuppression: false,
+        autoGainControl: false
+      }
+    });
+    this.stream = stream;
+    const source = context.createMediaStreamSource(stream);
+    this.source = source;
     const analyser = new AnalyserNode(
       context,
       {
@@ -64,7 +67,7 @@ new class {
     this.thresholdAmplitude = constructor.THRESHOLD_AMPLITUDE + floor;
 
     const _canvas = this.canvas;
-    this.context = _canvas.getContext('2d');
+    this.contextCanvas = _canvas.getContext('2d');
     _canvas.width = width;
     const height = _canvas.height = analyser.maxDecibels - floor;
 
@@ -109,7 +112,7 @@ new class {
   }
 
   render(time) {
-    const context = this.context;
+    const contextCanvas = this.contextCanvas;
     const _canvas = this.canvas;
     const width = _canvas.width;
     const height = _canvas.height;
@@ -179,9 +182,9 @@ new class {
       }
     }
 
-    context.clearRect(0, 0, width, height);
-    context.fillStyle = 'black';
-    context.fillRect(0, 0, width, height);
+    contextCanvas.clearRect(0, 0, width, height);
+    contextCanvas.fillStyle = 'black';
+    contextCanvas.fillRect(0, 0, width, height);
 
     const intervalTarget = this.interval;
     const peaks = [];
@@ -197,23 +200,23 @@ new class {
             peaks.push(candidate.bin);
             color = 'orange';
           } else color = 'purple';
-          context.fillStyle = color;
-          context.fillRect(indexBin, 0, 1, height);
+          contextCanvas.fillStyle = color;
+          contextCanvas.fillRect(indexBin, 0, 1, height);
         }
         average = averages[indexBin];
-        context.fillStyle = 'red';
-        context.fillRect(indexBin, ceiling - average, 1, average - floor);
+        contextCanvas.fillStyle = 'red';
+        contextCanvas.fillRect(indexBin, ceiling - average, 1, average - floor);
         if (candidate) {
-          context.fillStyle = 'green';
-          context.fillRect
+          contextCanvas.fillStyle = 'green';
+          contextCanvas.fillRect
             (indexBin, height - candidate.score, 1, candidate.score);
         }
       }
     }
 
     if (intervalTarget) {
-      context.fillStyle = 'white';
-      context.fillRect(0, height - this.thresholdScore, width, 1);
+      contextCanvas.fillStyle = 'white';
+      contextCanvas.fillRect(0, height - this.thresholdScore, width, 1);
     }
 
     const lengthPeaks = peaks.length;
@@ -314,9 +317,13 @@ new class {
         count += slice.length;
       }
       bar.style.width = total / count * 100 + "%";
-    }
-
-    requestAnimationFrame(this.renderBound);
+      if (total === count) {
+        this.source.disconnect();
+        this.analyser.disconnect();
+        for (const track of this.stream.getTracks()) track.stop();
+        document.body.className = 'timer';
+      } else requestAnimationFrame(this.renderBound);
+    } else requestAnimationFrame(this.renderBound);
   }
 
   update() {
@@ -356,3 +363,4 @@ const criteria = {
     }
   }
 };
+
