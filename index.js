@@ -20,26 +20,32 @@ new class {
   load() {
     document.addEventListener(
       'DOMContentLoaded',
-      () => document.body.addEventListener
-        ('click', this.run.bind(this), {once: true})
+      async () => {
+        let stream;
+        try {
+          stream = await navigator.mediaDevices.getUserMedia({
+            audio: {
+              channelCount: constructor.COUNT,
+              echoCancellation: false,
+              noiseSuppression: false,
+              autoGainControl: false
+            }
+          });
+        } catch {}
+        if (stream) this.run(stream);
+        else document.body.innerHTML = "microphone blocked";
+      }
     );
   }
 
-  async run() {
+  async run(stream) {
+    this.stream = stream;
+
     const constructor = this.constructor;
 
     const context = new AudioContext();
     this.contextAudio = context;
     await context.resume();
-    const stream = await navigator.mediaDevices.getUserMedia({
-      audio: {
-        channelCount: constructor.COUNT,
-        echoCancellation: false,
-        noiseSuppression: false,
-        autoGainControl: false
-      }
-    });
-    this.stream = stream;
     const source = context.createMediaStreamSource(stream);
     this.source = source;
     const analyser = new AnalyserNode(
