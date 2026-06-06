@@ -14,6 +14,7 @@ new class {
   static get THRESHOLD_ACTIVATION() {return 0.9;}
   static get HOLD() {return 3000;}
   static get SCALE() {return 10;}
+  static get FILE() {return "gong.ogg";}
 
   constructor(_canvas) {this.canvas = _canvas;}
 
@@ -32,7 +33,9 @@ new class {
             }
           });
         } catch {}
-        if (stream) this.run(stream);
+
+        if (stream) document.body.addEventListener
+          ('click', async () => this.run(stream), {once: true});
         else document.body.innerHTML = "microphone blocked";
       }
     );
@@ -48,6 +51,10 @@ new class {
     await context.resume();
     const source = context.createMediaStreamSource(stream);
     this.source = source;
+
+    this.buffer = await context.decodeAudioData
+      (await (await fetch(this.constructor.FILE)).arrayBuffer());
+
     const analyser = new AnalyserNode(
       context,
       {
@@ -119,9 +126,15 @@ new class {
     this.update();
     this.toggle();
 
-    timer.addEventListener('transitionend', console.log);
-
+    timer.addEventListener(
+      'transitionend',
+      () => {
+        document.exitFullscreen();
+        this.play();
+      }
+    );
     document.body.className = 'listener';
+    document.documentElement.requestFullscreen();
 
     const renderBound = this.render.bind(this);
     this.renderBound = renderBound;
@@ -340,6 +353,7 @@ new class {
         for (const track of this.stream.getTracks()) track.stop();
         document.body.className = 'timer';
         requestAnimationFrame(() => {timer.className = 'active';});
+        this.play();
       } else requestAnimationFrame(this.renderBound);
     } else requestAnimationFrame(this.renderBound);
   }
@@ -368,6 +382,14 @@ new class {
     for (const [event, handler] of Object.entries(this.handlers))
       method.bind(pad)(event, handler);
   }
+
+  play() {
+    const context = this.contextAudio;
+    const source = context.createBufferSource();
+    source.buffer = this.buffer;
+    source.connect(context.destination);
+    source.start();
+  }
 }(canvas).load();
 
 const criteria = {
@@ -381,4 +403,3 @@ const criteria = {
     }
   }
 };
-
