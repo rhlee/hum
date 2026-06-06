@@ -6,67 +6,73 @@ body {
   font-family: sans-serif;
   background: black;
   color: white;
+  height: 100dvh;
 
-  &.listener {
-    #listener {
-      height: 100dvh;
-      width: 100wh;
+  & > * {
+    display: none;
+  }
+
+  &.listener #listener {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+
+    & > * {
+      flex-basis: 0;
+      margin: 0;
+    }
+
+    #canvas {
+      flex-grow: 2;
+    }
+
+    #bar {
+      flex-grow: 1;
       display: flex;
-      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      background: red;
+    }
+
+    #controls {
+      flex-grow: 2;
+      display: flex;
+      gap: 0.5em;
 
       & > * {
-        flex-basis: 0;
-        margin: 0;
-      }
-
-      #canvas {
-        flex-grow: 2;
-      }
-
-      #bar {
         flex-grow: 1;
+        flex-basis: 0;
         display: flex;
         justify-content: center;
         align-items: center;
-        background: red;
       }
 
-      #controls {
-        flex-grow: 2;
-        display: flex;
-        gap: 0.5em;
+      #saveClear {
+        font-size: inherit;
+      }
 
-        & > * {
-          flex-grow: 1;
-          flex-basis: 0;
-          display: flex;
-          justify-content: center;
-          align-items: center;
-        }
+      #pad {
+        background: gray;
+        touch-action: none;
 
-        #saveClear {
-          font-size: inherit;
-        }
-
-        #pad {
-          background: gray;
-          touch-action: none;
-
-          &.disabled {
-            color: white;
-          }
+        &.disabled {
+          color: white;
         }
       }
-    }
-
-    #timer {
-      display: none;
     }
   }
 
-  &.timer {
-    #listener {
-      display: none;
+  &.timer #timer {
+    display: revert;
+    height: 100%;
+    background: maroon;
+    transform-origin: center bottom;
+    transform: scaleY(0);
+
+    transition: transform 1s linear;
+
+    &.active {
+      transform: scaleY(1);
     }
   }
 }

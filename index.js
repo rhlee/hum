@@ -17,7 +17,13 @@ new class {
 
   constructor(_canvas) {this.canvas = _canvas;}
 
-  load() {document.addEventListener('DOMContentLoaded', this.run.bind(this));}
+  load() {
+    document.addEventListener(
+      'DOMContentLoaded',
+      () => document.body.addEventListener
+        ('click', this.run.bind(this), {once: true})
+    );
+  }
 
   async run() {
     const constructor = this.constructor;
@@ -106,6 +112,10 @@ new class {
     this.save = false;
     this.update();
     this.toggle();
+
+    timer.addEventListener('transitionend', console.log);
+
+    document.body.className = 'listener';
 
     const renderBound = this.render.bind(this);
     this.renderBound = renderBound;
@@ -206,7 +216,8 @@ new class {
         }
         average = averages[indexBin];
         contextCanvas.fillStyle = 'red';
-        contextCanvas.fillRect(indexBin, ceiling - average, 1, average - floor);
+        contextCanvas
+          .fillRect(indexBin, ceiling - average, 1, average - floor);
         if (candidate) {
           contextCanvas.fillStyle = 'green';
           contextCanvas.fillRect
@@ -324,6 +335,7 @@ new class {
         this.analyser.disconnect();
         for (const track of this.stream.getTracks()) track.stop();
         document.body.className = 'timer';
+        requestAnimationFrame(() => {timer.className = 'active';});
       } else requestAnimationFrame(this.renderBound);
     } else requestAnimationFrame(this.renderBound);
   }
