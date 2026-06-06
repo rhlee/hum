@@ -65,11 +65,11 @@ body {
   &.timer #timer {
     display: revert;
     height: 100%;
-    background: #440000;
+    background: #000011;
     transform-origin: center bottom;
     transform: scaleY(0);
 
-    transition: transform 5s linear;
+    transition: transform 60s linear;
 
     &.active {
       transform: scaleY(1);

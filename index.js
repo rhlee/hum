@@ -34,9 +34,12 @@ new class {
           });
         } catch {}
 
-        if (stream) document.body.addEventListener
-          ('click', async () => this.run(stream), {once: true});
-        else document.body.innerHTML = "microphone blocked";
+        if (stream) {
+          if (window.matchMedia("(pointer: coarse)").matches)
+            document.body.addEventListener
+              ('click', async () => this.run(stream), {once: true});
+          else this.run(stream);
+        } else document.body.innerHTML = "microphone blocked";
       }
     );
   }
