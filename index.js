@@ -308,9 +308,7 @@ new class {
         this.update();
         this.toggle();
       };
-    } else {
-      frameCurrent.activated = false;
-    }
+    } else frameCurrent.activated = false;
 
     if (intervalTarget) {
       const _window = this.window;
