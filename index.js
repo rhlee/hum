@@ -352,8 +352,10 @@ new class {
         this.analyser.disconnect();
         for (const track of this.stream.getTracks()) track.stop();
         document.body.className = 'timer';
-        requestAnimationFrame(() => {timer.className = 'active';});
-        this.play();
+        requestAnimationFrame(() => {
+          timer.className = 'active';
+          this.play();
+        });
       } else requestAnimationFrame(this.renderBound);
     } else requestAnimationFrame(this.renderBound);
   }
