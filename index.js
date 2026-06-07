@@ -148,7 +148,7 @@ new class {
           this.lock.removeEventListener('release', this.releaseHandler);
           this.lock.release();
         }
-        this.play();
+        this.play(context.close.bind(context));
       }
     );
     document.body.className = 'listener';
@@ -365,6 +365,7 @@ new class {
       const activation = total / count / constructor.THRESHOLD_ACTIVATION;
       bar.style.width = activation * 100 + "%";
       if (activation >= 1) {
+        this.stop();
         document.body.className = 'timer';
         requestAnimationFrame(() => {
           timer.className = 'active';
@@ -399,8 +400,9 @@ new class {
       method.bind(pad)(event, handler);
   }
 
-  play() {
+  play(callback = () => {}) {
     const context = this.contextAudio;
+    context.resume();
     const source = context.createBufferSource();
     this.sourceBuffer = source;
     source.buffer = this.buffer;
@@ -410,6 +412,8 @@ new class {
       () => {
         source.disconnect();
         this.sourceBuffer = null;
+        context.suspend();
+        callback();
       }
     );
     source.start();
@@ -425,7 +429,7 @@ new class {
 
   err(message) {
     this.stop();
-    this.contextAudio?.close();
+    this.contextAudio.close();
     document.body.innerHTML = message;
   }
 }(canvas).load();
