@@ -36,10 +36,22 @@ new class {
 
         if (stream) {
           if (window.matchMedia("(pointer: coarse)").matches)
-            document.body.addEventListener
-              ('click', async () => this.run(stream), {once: true});
+            document.body.addEventListener(
+              'click',
+              async () => {
+                try {
+                  const lock = await navigator.wakeLock.request();
+                  this.lock = lock;
+                  const releaseHandler = () => this.err("wake lock lost");
+                  this.releaseHandler = releaseHandler;
+                  lock.addEventListener('release', releaseHandler);
+                } catch (error) {this.err(error);}
+                this.run(stream);
+              },
+              {once: true}
+            );
           else this.run(stream);
-        } else document.body.innerHTML = "microphone blocked";
+        } else this.err("microphone blocked");
       }
     );
   }
@@ -53,7 +65,7 @@ new class {
     this.contextAudio = context;
     await context.resume();
     const source = context.createMediaStreamSource(stream);
-    this.source = source;
+    this.sourceMedia = source;
 
     this.buffer = await context.decodeAudioData
       (await (await fetch(this.constructor.FILE)).arrayBuffer());
@@ -132,12 +144,14 @@ new class {
     timer.addEventListener(
       'transitionend',
       () => {
-        document.exitFullscreen();
+        if (this.lock) {
+          this.lock.removeEventListener('release', this.releaseHandler);
+          this.lock.release();
+        }
         this.play();
       }
     );
     document.body.className = 'listener';
-    document.documentElement.requestFullscreen();
 
     const renderBound = this.render.bind(this);
     this.renderBound = renderBound;
@@ -351,9 +365,6 @@ new class {
       const activation = total / count / constructor.THRESHOLD_ACTIVATION;
       bar.style.width = activation * 100 + "%";
       if (activation >= 1) {
-        this.source.disconnect();
-        this.analyser.disconnect();
-        for (const track of this.stream.getTracks()) track.stop();
         document.body.className = 'timer';
         requestAnimationFrame(() => {
           timer.className = 'active';
@@ -391,9 +402,31 @@ new class {
   play() {
     const context = this.contextAudio;
     const source = context.createBufferSource();
+    this.sourceBuffer = source;
     source.buffer = this.buffer;
     source.connect(context.destination);
+    source.addEventListener(
+      'ended',
+      () => {
+        source.disconnect();
+        this.sourceBuffer = null;
+      }
+    );
     source.start();
+  }
+
+  stop() {
+    this.sourceMedia?.disconnect();
+    this.analyser?.disconnect();
+    for (const track of this.stream?.getTracks() ?? []) track.stop();
+    try {this.sourceBuffer?.stop();}
+    catch {}
+  }
+
+  err(message) {
+    this.stop();
+    this.contextAudio?.close();
+    document.body.innerHTML = message;
   }
 }(canvas).load();
 
