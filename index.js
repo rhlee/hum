@@ -22,44 +22,41 @@ new class {
     document.addEventListener(
       'DOMContentLoaded',
       async () => {
-        let stream;
-        try {
-          stream = await navigator.mediaDevices.getUserMedia({
-            audio: {
-              channelCount: constructor.COUNT,
-              echoCancellation: false,
-              noiseSuppression: false,
-              autoGainControl: false
-            }
-          });
-        } catch {}
-
-        if (stream) {
-          if (window.matchMedia("(pointer: coarse)").matches)
-            document.body.addEventListener(
-              'click',
-              async () => {
-                try {
-                  const lock = await navigator.wakeLock.request();
-                  this.lock = lock;
-                  const releaseHandler = () => this.err("wake lock lost");
-                  this.releaseHandler = releaseHandler;
-                  lock.addEventListener('release', releaseHandler);
-                } catch (error) {this.err(error);}
-                this.run(stream);
-              },
-              {once: true}
-            );
-          else this.run(stream);
-        } else this.err("microphone blocked");
+        if (window.matchMedia("(pointer: coarse)").matches)
+          document.body.addEventListener(
+            'click',
+            async () => {
+              try {
+                const lock = await navigator.wakeLock.request();
+                this.lock = lock;
+                const releaseHandler = () => this.err("wake lock lost");
+                this.releaseHandler = releaseHandler;
+                lock.addEventListener('release', releaseHandler);
+              } catch (error) {this.err(error);}
+              this.run();
+            },
+            {once: true}
+          );
+        else this.run();
       }
     );
   }
 
-  async run(stream) {
-    this.stream = stream;
-
+  async run() {
     const constructor = this.constructor;
+
+    let stream;
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          channelCount: constructor.COUNT,
+          echoCancellation: false,
+          noiseSuppression: false,
+          autoGainControl: false
+        }
+      });
+    } catch {this.err("microphone blocked");}
+    this.stream = stream;
 
     const context = new AudioContext();
     this.contextAudio = context;
