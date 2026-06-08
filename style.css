@@ -65,7 +65,7 @@ body {
   &.timer #timer {
     display: revert;
     height: 100%;
-    background: #000011;
+    background: #081122;
     transform-origin: center bottom;
     transform: scaleY(0);
 
