@@ -47,16 +47,16 @@ body {
         align-items: center;
       }
 
-      #saveClear {
-        font-size: inherit;
-      }
+      .button {
+        background: #222;
+        border-radius: 1rem;
 
-      #pad {
-        background: gray;
-        touch-action: none;
+        &.#pad {
+          touch-action: none;
 
-        &.disabled {
-          color: white;
+          &.disabled {
+            color: white;
+          }
         }
       }
     }
