@@ -46,16 +46,8 @@ new class {
     const constructor = this.constructor;
 
     let stream;
-    try {
-      stream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          channelCount: constructor.COUNT,
-          echoCancellation: false,
-          noiseSuppression: false,
-          autoGainControl: false
-        }
-      });
-    } catch {this.err("microphone blocked");}
+    try {stream = await navigator.mediaDevices.getUserMedia({audio: true});}
+    catch {this.err("microphone blocked");}
     this.stream = stream;
 
     const context = new AudioContext();
