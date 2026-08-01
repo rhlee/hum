@@ -12,7 +12,6 @@ new class {
   static get THRESHOLD_CLUSTER() {return 3;}
   static get THRESHOLD_INTERVAL() {return 1;}
   static get THRESHOLD_ACTIVATION() {return 0.9;}
-  static get HOLD() {return 3000;}
   static get SCALE() {return 10;}
   static get FILE() {return "gong.ogg";}
 
@@ -70,7 +69,6 @@ new class {
     this.analyser = analyser;
     source.connect(analyser);
     const count = analyser.frequencyBinCount;
-    this.data = new Uint8Array(count);
     const width = count / constructor.FOCUS ** 2;
     this.window = Array.from(
       {length: constructor.SIZE_BUFFER},
@@ -126,6 +124,19 @@ new class {
         this.toggle();
       } else this.save = true;
     };
+    const duration = document.getElementById('duration');
+    const updateDuration = () => {
+      const seconds = this.half? 30 : 60;
+      duration.innerHTML = seconds;
+      timer.style.setProperty('--duration', seconds + 's');
+    };
+    this.half = localStorage.getItem('half') === 'true';
+    duration.onclick = () => {
+      this.half = !this.half;
+      localStorage.setItem('half', String(this.half));
+      updateDuration();
+    };
+    updateDuration();
     this.save = false;
     this.update();
     this.toggle();
@@ -259,8 +270,6 @@ new class {
     const lengthPeaks = peaks.length;
     if (lengthPeaks > 1) {
       const differences = new Array(lengthPeaks * (lengthPeaks - 1) / 2);
-      const differencePeaks = new Array
-        (Math.max(...peaks) - Math.min(...peaks) + 1).fill(Infinity);
       {
         let differenceIndex = 0;
         let second;
@@ -273,8 +282,6 @@ new class {
             peakSecond = peaks[second];
             difference = Math.abs(peakFirst - peakSecond);
             differences[differenceIndex++] = difference;
-            differencePeaks[difference]
-              = Math.min(differencePeaks[difference], peakFirst, peakSecond);
           }
         differences.sort((_first, _second) => _first - _second);
         differences.push(null);
@@ -299,7 +306,6 @@ new class {
       differenceFrequencies.push({frequency: 0});
       const thresholdCluster = maximum / this.constructor.THRESHOLD_CLUSTER;
 
-      let cluster = [];
       let total = 0;
       let count = 0;
       {
@@ -314,7 +320,6 @@ new class {
             current++;
             difference = differenceFrequency.difference;
             if (current !== difference) break;
-            cluster.push(current);
             total += difference * frequency;
             count += frequency;
           }
@@ -366,11 +371,9 @@ new class {
 
   update() {
     if (this.interval = Number(localStorage.getItem('interval'))) {
-      this.sizeSmoothing = constructor.SIZE_SMOOTHING;
       saveClear.innerHTML = "🧹";
       bar.innerHTML = "";
     } else {
-      this.sizeSmoothing = constructor.SIZE_LISTENING;
       saveClear.innerHTML = "✏️";
       bar.style.removeProperty('width');
     }
