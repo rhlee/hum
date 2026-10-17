@@ -39,6 +39,10 @@ body {
       display: flex;
       gap: 0.5em;
 
+      #duration {
+        font-size: 2em;
+      }
+
       & > * {
         flex-grow: 1;
         flex-basis: 0;
